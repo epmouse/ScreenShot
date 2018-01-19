@@ -5,6 +5,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.io.File;
@@ -74,6 +75,11 @@ public class RetrofitHelper {
 
     public Observable<String> getOrderSign(String decOrder) {
         return api.getSign(decOrder);
+    }
+
+    //获取识别解析结果
+    public Observable<JsonElement> getResultByServer(String question) {
+        return api.getResultFromServer(question);
     }
 
 

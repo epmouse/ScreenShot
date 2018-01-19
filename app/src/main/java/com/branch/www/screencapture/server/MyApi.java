@@ -24,6 +24,8 @@ public interface MyApi {
     Observable<String> getSign(@Field("orderParam") String orderParams);
     @GET("block/test/{device}")
     Observable<JsonElement> getServerVersion(@Path("device") String device);
+    @GET("")
+    Observable<JsonElement> getResultFromServer(@Path("question") String question);
 //    @FormUrlEncoded
 //    @POST("login/invalid")
 //    Observable<LoginStatusBean> login(@Field("username") String username, @Field("password") String password);
