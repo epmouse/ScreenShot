@@ -21,14 +21,13 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.os.AsyncTaskCompat;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
-
-import com.branch.www.screencapture.baiduOcr.BaiduOcrUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -77,8 +76,8 @@ public class FloatWindowsService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        createFloatView();
-
+        createFloatView(Gravity.LEFT | Gravity.TOP,0,0);
+        createAnswerView(Gravity.CENTER_HORIZONTAL|Gravity.BOTTOM,0,0);
         createImageReader();
     }
 
@@ -95,7 +94,7 @@ public class FloatWindowsService extends Service {
         return null;
     }
 
-    private void createFloatView() {
+    private void createFloatView(int position,int width,int height) {
         mGestureDetector = new GestureDetector(getApplicationContext(), new FloatGestrueTouchListener());
         mLayoutParams = new WindowManager.LayoutParams();
         mWindowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
@@ -111,7 +110,42 @@ public class FloatWindowsService extends Service {
         // 设置Window flag
         mLayoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        mLayoutParams.gravity = Gravity.LEFT | Gravity.TOP;
+        mLayoutParams.gravity = position;
+        mLayoutParams.x = mScreenWidth;
+        mLayoutParams.y = 100;
+        mLayoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
+        mLayoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+
+
+        mFloatView = new ImageView(getApplicationContext());
+        mFloatView.setImageBitmap(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+        mWindowManager.addView(mFloatView, mLayoutParams);
+
+
+        mFloatView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return mGestureDetector.onTouchEvent(event);
+            }
+        });
+    }
+    private void createAnswerView(int position,int width,int height) {
+        mGestureDetector = new GestureDetector(getApplicationContext(), new FloatGestrueTouchListener());
+        mLayoutParams = new WindowManager.LayoutParams();
+        mWindowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+
+        DisplayMetrics metrics = new DisplayMetrics();
+        mWindowManager.getDefaultDisplay().getMetrics(metrics);
+        mScreenDensity = metrics.densityDpi;
+        mScreenWidth = metrics.widthPixels;
+        mScreenHeight = metrics.heightPixels;
+
+        mLayoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+        mLayoutParams.format = PixelFormat.RGBA_8888;
+        // 设置Window flag
+        mLayoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        mLayoutParams.gravity = position;
         mLayoutParams.x = mScreenWidth;
         mLayoutParams.y = 100;
         mLayoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
@@ -294,7 +328,7 @@ public class FloatWindowsService extends Service {
                         media.setData(contentUri);
                         sendBroadcast(media);
                     }
-                    BaiduOcrUtils.shibie(fileImage);//识别图片
+
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                     fileImage = null;
@@ -313,19 +347,50 @@ public class FloatWindowsService extends Service {
         @Override
         protected void onPostExecute(Bitmap bitmap) {
             super.onPostExecute(bitmap);
-//            //预览图片
-//            if (bitmap != null) {
+            //预览图片
+            if (bitmap != null) {
+                Bitmap bitmap1 = cropBitmap(bitmap);
+                ((ScreenCaptureApplication) getApplication()).setmScreenCaptureBitmap(bitmap1);
+                Log.e("ryze", "获取图片成功");
+                startActivity(PreviewPictureActivity.newIntent(getApplicationContext()));
+            }
+
+//            //图片文字识别
+//            BaiduOcrUtils.shibie(bitmap,new OnResultListener<GeneralResult>() {
+//                @Override
+//                public void onResult(GeneralResult result) {
+//                    final StringBuilder sb = new StringBuilder();
+//                    for (WordSimple wordSimple : result.getWordList()) {
+//                        WordSimple word = wordSimple;
+//                        String words = word.getWords();
+//                        sb.append(words);
+//                    }
 //
-//                ((ScreenCaptureApplication) getApplication()).setmScreenCaptureBitmap(bitmap);
-//                Log.e("ryze", "获取图片成功");
-//                startActivity(PreviewPictureActivity.newIntent(getApplicationContext()));
-//            }
+//                    getAnswerFromServer(sb.toString());
+//                }
 //
-//            mFloatView.setVisibility(View.VISIBLE);
+//                @Override
+//                public void onError(OCRError error) {
+//                    System.out.println(error);
+//                }
+//            });
+            mFloatView.setVisibility(View.VISIBLE);
 
         }
     }
+    //请求网络获取搜索结果
+    private void getAnswerFromServer(String s) {
 
+
+    }
+    private Bitmap cropBitmap(Bitmap bitmap) {
+        int w = bitmap.getWidth(); // 得到图片的宽，高
+        int h = bitmap.getHeight();
+//        int cropWidth = w >= h ? h : w;// 裁切后所取的正方形区域边长
+//        cropWidth /= 2;
+//        int cropHeight = (int) (cropWidth / 1.2);
+        return Bitmap.createBitmap(bitmap, 0, 300, w, h-400, null, false);
+    }
 
     private void tearDownMediaProjection() {
         if (mMediaProjection != null) {
@@ -353,8 +418,6 @@ public class FloatWindowsService extends Service {
 
         tearDownMediaProjection();
     }
-
-
 
 
 }
